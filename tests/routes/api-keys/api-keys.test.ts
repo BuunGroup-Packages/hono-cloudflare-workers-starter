@@ -1,9 +1,13 @@
+/**
+ * API Keys Tests
+ */
+
 import { describe, it, expect } from "vitest";
 import { env } from "cloudflare:test";
-import app from "../src/index";
+import app from "../../../src/index";
+import { headers, getAuthToken } from "../../helpers/auth";
 
 // Type definitions
-type LoginResponse = { accessToken: string };
 type ApiKeyResponse = {
   id: string;
   key: string;
@@ -13,6 +17,7 @@ type ApiKeyResponse = {
   expiresAt: string | null;
   message: string;
 };
+
 type ApiKeyListResponse = {
   apiKeys: Array<{
     id: string;
@@ -23,45 +28,12 @@ type ApiKeyListResponse = {
   page: number;
   limit: number;
 };
+
 type MessageResponse = { message: string; id?: string };
-
-// Common headers
-const headers = {
-  "Content-Type": "application/json",
-  Origin: "http://localhost",
-};
-
-// Helper to create authenticated user
-async function createAuthenticatedUser(): Promise<string> {
-  const email = `apikey-test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
-
-  await app.request(
-    "/api/auth/register",
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ email, password: "SecurePass123" }),
-    },
-    env
-  );
-
-  const loginRes = await app.request(
-    "/api/auth/login",
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ email, password: "SecurePass123" }),
-    },
-    env
-  );
-
-  const data = (await loginRes.json()) as LoginResponse;
-  return data.accessToken;
-}
 
 describe("API Keys - Create", () => {
   it("POST /api/api-keys creates a new API key", async () => {
-    const accessToken = await createAuthenticatedUser();
+    const accessToken = await getAuthToken();
 
     const res = await app.request(
       "/api/api-keys",
@@ -107,7 +79,7 @@ describe("API Keys - Create", () => {
 
 describe("API Keys - List", () => {
   it("GET /api/api-keys lists user API keys", async () => {
-    const accessToken = await createAuthenticatedUser();
+    const accessToken = await getAuthToken();
 
     // Create a key first
     await app.request(
@@ -156,7 +128,7 @@ describe("API Keys - List", () => {
 
 describe("API Keys - Delete", () => {
   it("DELETE /api/api-keys/:id revokes the key", async () => {
-    const accessToken = await createAuthenticatedUser();
+    const accessToken = await getAuthToken();
 
     // Create a key
     const createRes = await app.request(
@@ -197,7 +169,7 @@ describe("API Keys - Delete", () => {
 
 describe("API Keys - Authentication", () => {
   it("API key can authenticate read requests", async () => {
-    const accessToken = await createAuthenticatedUser();
+    const accessToken = await getAuthToken();
 
     // Create an API key
     const createRes = await app.request(

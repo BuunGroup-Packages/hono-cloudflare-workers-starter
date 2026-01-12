@@ -291,6 +291,63 @@ curl -s -X POST http://localhost:5138/api/api-keys \
 
 ---
 
+### GET /api/api-keys/:id (Protected)
+
+Get details for a specific API key.
+
+**Request:**
+```bash
+curl -s http://localhost:5138/api/api-keys/YOUR_KEY_ID \
+  -H "Authorization: Bearer <access_token>" | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "user_id": "user-uuid",
+  "key_prefix": "sk_live_",
+  "name": "Production App",
+  "scopes": ["posts:read", "posts:create"],
+  "rate_limit": 1000,
+  "last_used_at": "2026-01-12 10:30:00",
+  "expires_at": null,
+  "created_at": "2026-01-12 10:00:00"
+}
+```
+
+---
+
+### PUT /api/api-keys/:id (Protected)
+
+Update an API key's name, scopes, or rate limit.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | New key name (1-100 chars) |
+| `scopes` | string[] | No | New permissions |
+| `rateLimit` | number | No | Custom rate limit (1-10000) |
+
+**Request:**
+```bash
+curl -s -X PUT http://localhost:5138/api/api-keys/YOUR_KEY_ID \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Updated Name","scopes":["posts:read","posts:create","posts:update"]}' | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "API key updated",
+  "id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+---
+
 ### DELETE /api/api-keys/:id (Protected)
 
 Revoke an API key.
@@ -306,6 +363,35 @@ curl -s -X DELETE http://localhost:5138/api/api-keys/YOUR_KEY_ID \
 {
   "message": "API key revoked",
   "id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+---
+
+### GET /api/api-keys/admin/all (Admin Only)
+
+List all API keys across all users. Requires admin role.
+
+**Request:**
+```bash
+curl -s http://localhost:5138/api/api-keys/admin/all \
+  -H "Authorization: Bearer <admin_access_token>" | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "apiKeys": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "key_prefix": "sk_live_",
+      "name": "Production App",
+      "scopes": ["posts:read"],
+      "last_used_at": "2026-01-12 10:30:00",
+      "created_at": "2026-01-12 10:00:00",
+      "user_email": "user@example.com"
+    }
+  ]
 }
 ```
 

@@ -1,0 +1,31 @@
+name = "hono-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# D1 Database Configuration
+# After running `wrangler d1 create my-database`, update the database_id below
+[[d1_databases]]
+binding = "DB"
+database_name = "my-database"
+database_id = "your-database-id-here"  # Replace with your actual database ID
+
+# Uncomment and configure as needed:
+
+# KV Namespace
+# [[kv_namespaces]]
+# binding = "KV"
+# id = "your-kv-namespace-id"
+
+# R2 Bucket
+# [[r2_buckets]]
+# binding = "BUCKET"
+# bucket_name = "my-bucket"
+
+# Environment Variables (non-secret)
+# [vars]
+# ENVIRONMENT = "production"
+
+# Development settings
+[dev]
+port = 5138
+local_protocol = "http"

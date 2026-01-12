@@ -1,17 +1,29 @@
+<div align="center">
+
+![Buun Group](https://buungroup.com/og-image.png)
+
 # Hono + Cloudflare Workers Starter
 
 Production-ready REST API starter with Hono, TypeScript, Zod validation, and D1 database.
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://typescriptlang.org)
+[![Hono](https://img.shields.io/badge/Hono-4.7-orange?logo=hono)](https://hono.dev)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare)](https://workers.cloudflare.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+[Tutorial](https://buungroup.com/blog/hono-rest-api-cloudflare-workers-tutorial-2026) · [Buun Group](https://buungroup.com)
+
+</div>
+
+---
+
 ## Quick Start
 
 ```bash
-# Install dependencies
+git clone https://github.com/BuunGroup-Packages/hono-cloudflare-workers-starter.git
+cd hono-cloudflare-workers-starter
 npm install
-
-# Apply database migrations
 npm run db:migrate:local
-
-# Start dev server
 npm run dev
 ```
 
@@ -76,8 +88,8 @@ npm run deploy
 
 ## Tutorial
 
-This starter accompanies: [Build a REST API with Hono on Cloudflare Workers](https://buungroup.com/blog/hono-rest-api-cloudflare-workers-tutorial-2026)
+This starter accompanies: **[Build a REST API with Hono on Cloudflare Workers](https://buungroup.com/blog/hono-rest-api-cloudflare-workers-tutorial-2026)**
 
 ## License
 
-MIT
+MIT © [Buun Group](https://buungroup.com)

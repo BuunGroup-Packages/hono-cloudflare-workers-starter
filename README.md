@@ -33,6 +33,12 @@ Production-ready REST API with JWT auth, API keys, RBAC, rate limiting, and audi
 git clone https://github.com/BuunGroup-Packages/hono-cloudflare-workers-starter.git
 cd hono-cloudflare-workers-starter
 npm install
+
+# Setup local secrets
+cp .dev.vars.example .dev.vars
+# Edit .dev.vars and set JWT_SECRET
+
+# Run migrations and start
 npm run db:migrate:local
 npm run dev
 ```
@@ -104,20 +110,53 @@ curl http://localhost:5138/api/posts \
 
 ```
 src/
-├── index.ts              # App entry with middleware
+├── index.ts                 # App entry with middleware
+├── lib/
+│   └── password.ts          # Password hashing (PBKDF2)
 ├── routes/
-│   ├── auth.ts           # Authentication routes
-│   ├── posts.ts          # CRUD routes
-│   └── api-keys.ts       # API key management
+│   ├── index.ts             # Routes barrel export
+│   ├── auth/
+│   │   ├── index.ts         # Auth routes combiner
+│   │   ├── register.ts      # POST /auth/register
+│   │   ├── login.ts         # POST /auth/login
+│   │   ├── logout.ts        # POST /auth/logout
+│   │   ├── refresh.ts       # POST /auth/refresh
+│   │   ├── me.ts            # GET /auth/me
+│   │   └── password.ts      # PUT /auth/password
+│   ├── posts.ts             # Posts CRUD
+│   └── api-keys.ts          # API key management
 ├── middleware/
-│   ├── jwt-auth.ts       # JWT authentication
-│   ├── api-key-auth.ts   # API key authentication
-│   ├── rate-limiter.ts   # Rate limiting
-│   ├── rbac.ts           # Role-based access
-│   ├── audit-logger.ts   # Audit logging
-│   └── error-handler.ts  # Error handling
-├── schemas/              # Zod validation
-└── types/bindings.ts     # TypeScript types
+│   ├── index.ts             # Middleware barrel export
+│   ├── jwt-auth.ts          # JWT authentication
+│   ├── api-key-auth.ts      # API key authentication
+│   ├── rate-limiter.ts      # Rate limiting
+│   ├── rbac.ts              # Role-based access
+│   ├── audit-logger.ts      # Audit logging
+│   └── error-handler.ts     # Error handling
+├── schemas/
+│   ├── index.ts             # Schemas barrel export
+│   ├── auth.ts              # Auth validation schemas
+│   └── post.ts              # Post validation schemas
+└── types/
+    └── bindings.ts          # TypeScript types
+
+tests/
+├── setup.ts                 # Test database setup
+├── cloudflare-test.d.ts     # Test type definitions
+├── helpers/
+│   └── auth.ts              # Shared test utilities
+├── routes/
+│   ├── auth/
+│   │   ├── register.test.ts
+│   │   ├── login.test.ts
+│   │   ├── logout.test.ts
+│   │   └── me.test.ts
+│   ├── posts/
+│   │   └── posts.test.ts
+│   └── api-keys/
+│       └── api-keys.test.ts
+└── integration/
+    └── health.test.ts
 
 migrations/
 ├── 0001_create_posts.sql

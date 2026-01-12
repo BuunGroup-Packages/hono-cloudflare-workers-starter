@@ -1,14 +1,19 @@
 {
   "name": "hono-cloudflare-workers-starter",
-  "version": "1.0.0",
-  "description": "Production-ready REST API starter with Hono on Cloudflare Workers",
+  "version": "2.0.0",
+  "description": "Production-ready REST API starter with Hono on Cloudflare Workers - with JWT auth, API keys, RBAC, and audit logging",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create my-database",
-    "db:migrate:local": "wrangler d1 execute my-database --local --file=./migrations/0001_create_posts.sql",
-    "db:migrate:remote": "wrangler d1 execute my-database --remote --file=./migrations/0001_create_posts.sql",
+    "db:migrate:local": "npm run db:migrate:local:posts && npm run db:migrate:local:auth",
+    "db:migrate:local:posts": "wrangler d1 execute my-database --local --file=./migrations/0001_create_posts.sql",
+    "db:migrate:local:auth": "wrangler d1 execute my-database --local --file=./migrations/0002_create_auth_tables.sql",
+    "db:migrate:remote": "npm run db:migrate:remote:posts && npm run db:migrate:remote:auth",
+    "db:migrate:remote:posts": "wrangler d1 execute my-database --remote --file=./migrations/0001_create_posts.sql",
+    "db:migrate:remote:auth": "wrangler d1 execute my-database --remote --file=./migrations/0002_create_auth_tables.sql",
+    "secret:jwt": "wrangler secret put JWT_SECRET",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -32,7 +37,11 @@
     "rest-api",
     "typescript",
     "d1",
-    "edge"
+    "edge",
+    "jwt",
+    "authentication",
+    "rbac",
+    "security"
   ],
   "author": "Buun Group",
   "license": "MIT"

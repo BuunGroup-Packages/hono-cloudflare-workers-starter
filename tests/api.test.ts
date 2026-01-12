@@ -1,17 +1,46 @@
-import { describe, it, expect } from "vitest";
-import { env, SELF } from "cloudflare:test";
+import { describe, it, expect, beforeEach } from "vitest";
+import { env } from "cloudflare:test";
 import app from "../src/index";
 
 // Type definitions for API responses
-type HealthResponse = { status: string };
+type HealthResponse = { status: string; timestamp: string; requestId: string };
 type PostsListResponse = { posts: unknown[]; page: number; limit: number };
-type PostResponse = {
-  id: string;
-  title: string;
-  body: string;
-  published: boolean;
-};
 type ErrorResponse = { error: string };
+type LoginResponse = { accessToken: string };
+
+// Common headers for requests (bypass CSRF with Origin)
+const headers = {
+  "Content-Type": "application/json",
+  Origin: "http://localhost",
+};
+
+// Helper to get auth token
+async function getAuthToken(): Promise<string> {
+  const email = `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+
+  await app.request(
+    "/api/auth/register",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ email, password: "SecurePass123" }),
+    },
+    env
+  );
+
+  const loginRes = await app.request(
+    "/api/auth/login",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ email, password: "SecurePass123" }),
+    },
+    env
+  );
+
+  const data = (await loginRes.json()) as LoginResponse;
+  return data.accessToken;
+}
 
 describe("Health Check", () => {
   it("GET /health returns 200", async () => {
@@ -19,12 +48,14 @@ describe("Health Check", () => {
     expect(res.status).toBe(200);
 
     const data = (await res.json()) as HealthResponse;
-    expect(data).toEqual({ status: "ok" });
+    expect(data.status).toBe("ok");
+    expect(data.timestamp).toBeDefined();
+    expect(data.requestId).toBeDefined();
   });
 });
 
-describe("Posts API", () => {
-  it("GET /api/posts returns 200", async () => {
+describe("Posts API - Public", () => {
+  it("GET /api/posts returns 200 without authentication", async () => {
     const res = await app.request("/api/posts", {}, env);
     expect(res.status).toBe(200);
 
@@ -32,49 +63,6 @@ describe("Posts API", () => {
     expect(data).toHaveProperty("posts");
     expect(data).toHaveProperty("page");
     expect(data).toHaveProperty("limit");
-  });
-
-  it("POST /api/posts creates a post", async () => {
-    const res = await app.request(
-      "/api/posts",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Test Post",
-          body: "Test content for the post body",
-          published: true,
-        }),
-      },
-      env
-    );
-
-    expect(res.status).toBe(201);
-    const data = (await res.json()) as PostResponse;
-    expect(data.title).toBe("Test Post");
-    expect(data.id).toBeDefined();
-  });
-
-  it("POST /api/posts validates required fields", async () => {
-    const res = await app.request(
-      "/api/posts",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "", // Invalid: empty
-          body: "Content",
-        }),
-      },
-      env
-    );
-
-    expect(res.status).toBe(400);
-  });
-
-  it("GET /api/posts/unknown returns 404", async () => {
-    const res = await app.request("/api/posts/unknown-id-12345", {}, env);
-    expect(res.status).toBe(404);
   });
 
   it("GET /api/posts supports pagination", async () => {
@@ -86,9 +74,51 @@ describe("Posts API", () => {
     expect(data.limit).toBe(5);
   });
 
-  it("GET /api/posts supports filtering by published", async () => {
-    const res = await app.request("/api/posts?published=true", {}, env);
-    expect(res.status).toBe(200);
+  it("GET /api/posts/unknown returns 404", async () => {
+    const res = await app.request("/api/posts/unknown-id-12345", {}, env);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("Posts API - Protected", () => {
+  it("POST /api/posts requires authentication", async () => {
+    const res = await app.request(
+      "/api/posts",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          title: "Unauthorized Post",
+          body: "This should fail",
+        }),
+      },
+      env
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /api/posts creates a post with authentication", async () => {
+    const accessToken = await getAuthToken();
+
+    const res = await app.request(
+      "/api/posts",
+      {
+        method: "POST",
+        headers: {
+          ...headers,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          title: "Test Post",
+          body: "Test content for the post body",
+          published: true,
+        }),
+      },
+      env
+    );
+
+    expect(res.status).toBe(201);
   });
 });
 

@@ -12,7 +12,16 @@ export default defineWorkersConfig({
           d1Databases: {
             DB: "test-db",
           },
+          // Provide test bindings
+          bindings: {
+            JWT_SECRET: "test-jwt-secret-for-testing-only-32chars",
+          },
         },
+        // Use single worker to avoid isolation issues with waitUntil
+        singleWorker: true,
+        // Disable isolated storage to work around waitUntil issues
+        // See: https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#isolated-storage
+        isolatedStorage: false,
       },
     },
   },

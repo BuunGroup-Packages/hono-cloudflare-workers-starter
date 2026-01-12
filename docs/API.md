@@ -4,6 +4,24 @@ Base URL: `http://localhost:5138` (development) or `https://your-worker.workers.
 
 > **Tip:** Add `| jq` to curl commands for formatted JSON output. Install jq: `brew install jq` or `apt install jq`
 
+## Authentication
+
+This API supports two authentication methods:
+
+1. **JWT Bearer Token** - For user sessions (browser apps, mobile apps)
+2. **API Key** - For server-to-server integration
+
+Include in requests:
+```bash
+# JWT Token
+-H "Authorization: Bearer <access_token>"
+
+# OR API Key
+-H "X-API-Key: sk_live_..."
+```
+
+---
+
 ## Health Check
 
 ### GET /health
@@ -18,7 +36,276 @@ curl -s http://localhost:5138/health | jq
 **Response:** `200 OK`
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "timestamp": "2026-01-12T10:30:00.000Z",
+  "requestId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+---
+
+## Auth Endpoints
+
+### POST /api/auth/register
+
+Create a new user account.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | Valid email address |
+| `password` | string | Yes | Min 8 chars, 1 uppercase, 1 lowercase, 1 number |
+
+**Request:**
+```bash
+curl -s -X POST http://localhost:5138/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"SecurePass123"}' | jq
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "message": "User created successfully"
+}
+```
+
+---
+
+### POST /api/auth/login
+
+Authenticate and receive JWT tokens.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | User email |
+| `password` | string | Yes | User password |
+
+**Request:**
+```bash
+curl -s -X POST http://localhost:5138/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"SecurePass123"}' | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "role": "user"
+  }
+}
+```
+
+---
+
+### POST /api/auth/refresh
+
+Exchange refresh token for new tokens.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `refreshToken` | string | Yes | Valid refresh token |
+
+**Request:**
+```bash
+curl -s -X POST http://localhost:5138/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken":"eyJhbGciOiJIUzI1NiIs..."}' | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+```
+
+---
+
+### POST /api/auth/logout (Protected)
+
+Revoke all refresh tokens for the user.
+
+**Request:**
+```bash
+curl -s -X POST http://localhost:5138/api/auth/logout \
+  -H "Authorization: Bearer <access_token>" | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+### GET /api/auth/me (Protected)
+
+Get current user info.
+
+**Request:**
+```bash
+curl -s http://localhost:5138/api/auth/me \
+  -H "Authorization: Bearer <access_token>" | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "role": "user",
+  "created_at": "2026-01-12 10:30:00"
+}
+```
+
+---
+
+### PUT /api/auth/password (Protected)
+
+Change user password.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `currentPassword` | string | Yes | Current password |
+| `newPassword` | string | Yes | New password (same requirements as register) |
+
+**Request:**
+```bash
+curl -s -X PUT http://localhost:5138/api/auth/password \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"currentPassword":"SecurePass123","newPassword":"NewSecurePass456"}' | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Password updated successfully"
+}
+```
+
+---
+
+## API Keys
+
+### GET /api/api-keys (Protected)
+
+List user's API keys.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | 1 | Page number |
+| `limit` | number | 20 | Items per page (1-100) |
+
+**Request:**
+```bash
+curl -s http://localhost:5138/api/api-keys \
+  -H "Authorization: Bearer <access_token>" | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "apiKeys": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "keyPrefix": "sk_live_",
+      "name": "Production App",
+      "scopes": ["posts:read", "posts:create"],
+      "rate_limit": 1000,
+      "last_used_at": "2026-01-12 10:30:00",
+      "created_at": "2026-01-12 10:00:00"
+    }
+  ],
+  "page": 1,
+  "limit": 20
+}
+```
+
+---
+
+### POST /api/api-keys (Protected)
+
+Create a new API key.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Key name (1-100 chars) |
+| `scopes` | string[] | No | Permissions (default: `["posts:read"]`) |
+| `expiresInDays` | number | No | Expiration in days (1-365) |
+
+**Available Scopes:**
+- `posts:read` - Read posts
+- `posts:create` - Create posts
+- `posts:update` - Update posts
+- `posts:delete` - Delete posts
+
+**Request:**
+```bash
+curl -s -X POST http://localhost:5138/api/api-keys \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My App","scopes":["posts:read","posts:create"]}' | jq
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "key": "sk_live_abc123...",
+  "keyPrefix": "sk_live_",
+  "name": "My App",
+  "scopes": ["posts:read", "posts:create"],
+  "expiresAt": null,
+  "message": "Store this API key securely. You will not be able to see it again."
+}
+```
+
+> **Important:** The full API key is only shown once. Store it securely!
+
+---
+
+### DELETE /api/api-keys/:id (Protected)
+
+Revoke an API key.
+
+**Request:**
+```bash
+curl -s -X DELETE http://localhost:5138/api/api-keys/YOUR_KEY_ID \
+  -H "Authorization: Bearer <access_token>" | jq
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "API key revoked",
+  "id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -26,7 +313,7 @@ curl -s http://localhost:5138/health | jq
 
 ## Posts
 
-### GET /api/posts
+### GET /api/posts (Public)
 
 List all posts with pagination.
 
@@ -40,14 +327,7 @@ List all posts with pagination.
 
 **Request:**
 ```bash
-# List all posts
 curl -s http://localhost:5138/api/posts | jq
-
-# With pagination
-curl -s "http://localhost:5138/api/posts?page=1&limit=5" | jq
-
-# Filter published only
-curl -s "http://localhost:5138/api/posts?published=true" | jq
 ```
 
 **Response:** `200 OK`
@@ -70,19 +350,13 @@ curl -s "http://localhost:5138/api/posts?published=true" | jq
 
 ---
 
-### GET /api/posts/:id
+### GET /api/posts/:id (Public)
 
 Get a single post by ID.
 
-**Path Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string | Post UUID |
-
 **Request:**
 ```bash
-curl -s http://localhost:5138/api/posts/550e8400-e29b-41d4-a716-446655440000 | jq
+curl -s http://localhost:5138/api/posts/YOUR_POST_ID | jq
 ```
 
 **Response:** `200 OK`
@@ -97,18 +371,11 @@ curl -s http://localhost:5138/api/posts/550e8400-e29b-41d4-a716-446655440000 | j
 }
 ```
 
-**Error Response:** `404 Not Found`
-```json
-{
-  "error": "Post not found"
-}
-```
-
 ---
 
-### POST /api/posts
+### POST /api/posts (Protected)
 
-Create a new post.
+Create a new post. Requires authentication.
 
 **Request Body:**
 
@@ -121,6 +388,7 @@ Create a new post.
 **Request:**
 ```bash
 curl -s -X POST http://localhost:5138/api/posts \
+  -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{"title":"Hello World","body":"My first post content","published":true}' | jq
 ```
@@ -135,47 +403,16 @@ curl -s -X POST http://localhost:5138/api/posts \
 }
 ```
 
-**Validation Error:** `400 Bad Request`
-```json
-{
-  "error": "Validation failed",
-  "details": [
-    {
-      "code": "too_small",
-      "minimum": 1,
-      "type": "string",
-      "inclusive": true,
-      "exact": false,
-      "message": "Title is required",
-      "path": ["title"]
-    }
-  ]
-}
-```
-
 ---
 
-### PUT /api/posts/:id
+### PUT /api/posts/:id (Protected)
 
-Update an existing post. All fields are optional (partial update).
-
-**Path Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string | Post UUID |
-
-**Request Body:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | No | Post title (1-200 characters) |
-| `body` | string | No | Post content (min 1 character) |
-| `published` | boolean | No | Published status |
+Update an existing post. Requires authentication.
 
 **Request:**
 ```bash
 curl -s -X PUT http://localhost:5138/api/posts/YOUR_POST_ID \
+  -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{"title":"Updated Title","published":false}' | jq
 ```
@@ -189,41 +426,22 @@ curl -s -X PUT http://localhost:5138/api/posts/YOUR_POST_ID \
 }
 ```
 
-**Error Response:** `404 Not Found`
-```json
-{
-  "error": "Post not found"
-}
-```
-
 ---
 
-### DELETE /api/posts/:id
+### DELETE /api/posts/:id (Protected)
 
-Delete a post.
-
-**Path Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string | Post UUID |
+Delete a post. Requires authentication.
 
 **Request:**
 ```bash
-curl -s -X DELETE http://localhost:5138/api/posts/YOUR_POST_ID | jq
+curl -s -X DELETE http://localhost:5138/api/posts/YOUR_POST_ID \
+  -H "Authorization: Bearer <access_token>" | jq
 ```
 
 **Response:** `200 OK`
 ```json
 {
   "deleted": true
-}
-```
-
-**Error Response:** `404 Not Found`
-```json
-{
-  "error": "Post not found"
 }
 ```
 
@@ -246,31 +464,53 @@ All errors follow this format:
 | `200` | Success |
 | `201` | Created |
 | `400` | Bad Request (validation error) |
+| `401` | Unauthorized (missing/invalid auth) |
+| `403` | Forbidden (insufficient permissions) |
 | `404` | Not Found |
+| `409` | Conflict (e.g., email already exists) |
+| `429` | Too Many Requests (rate limited) |
 | `500` | Internal Server Error |
 | `503` | Database Error |
 
+### Rate Limit Headers
+
+Rate-limited responses include these headers:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: 60
+Retry-After: 30
+```
+
 ---
 
-## Quick Test (Copy & Paste)
+## Quick Test (Full Flow)
 
 ```bash
-# 1. Create a post
+# 1. Register a user
+curl -s -X POST http://localhost:5138/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"SecurePass123"}' | jq
+
+# 2. Login and save token
+TOKEN=$(curl -s -X POST http://localhost:5138/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"SecurePass123"}' | jq -r '.accessToken')
+
+# 3. Create a post (authenticated)
 curl -s -X POST http://localhost:5138/api/posts \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Test Post","body":"Test content","published":true}' | jq
+  -d '{"title":"My Post","body":"Hello world!","published":true}' | jq
 
-# 2. List all posts (copy the ID from step 1)
-curl -s http://localhost:5138/api/posts | jq
-
-# 3. Get single post (replace YOUR_ID)
-curl -s http://localhost:5138/api/posts/YOUR_ID | jq
-
-# 4. Update post
-curl -s -X PUT http://localhost:5138/api/posts/YOUR_ID \
+# 4. Create an API key
+curl -s -X POST http://localhost:5138/api/api-keys \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Updated Title"}' | jq
+  -d '{"name":"CLI App","scopes":["posts:read"]}' | jq
 
-# 5. Delete post
-curl -s -X DELETE http://localhost:5138/api/posts/YOUR_ID | jq
+# 5. Use API key to read posts
+curl -s http://localhost:5138/api/posts \
+  -H "X-API-Key: sk_live_..." | jq
 ```

@@ -3,29 +3,53 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 # D1 Database Configuration
-# After running `wrangler d1 create my-database`, update the database_id below
+# Run: wrangler d1 create my-database
 [[d1_databases]]
 binding = "DB"
 database_name = "my-database"
-database_id = "your-database-id-here"  # Replace with your actual database ID
+database_id = "your-database-id-here"  # Replace with actual database ID
 
-# Uncomment and configure as needed:
+# Rate Limiting Configuration (Cloudflare Rate Limiting API)
+# Requires Cloudflare Pro plan or higher
+# See: https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+# Uncomment to enable:
+# [[unsafe.bindings]]
+# name = "RATE_LIMITER"
+# type = "ratelimit"
+# namespace_id = "1001"  # Unique namespace ID
+# simple = { limit = 100, period = 60 }  # 100 requests per 60 seconds
 
-# KV Namespace
+# KV Namespace for Rate Limiting Fallback (alternative to Rate Limiting API)
+# Run: wrangler kv:namespace create "RATE_LIMIT_KV"
 # [[kv_namespaces]]
-# binding = "KV"
+# binding = "RATE_LIMIT_KV"
 # id = "your-kv-namespace-id"
 
-# R2 Bucket
+# R2 Bucket (optional - for file storage)
 # [[r2_buckets]]
-# binding = "BUCKET"
+# binding = "R2_BUCKET"
 # bucket_name = "my-bucket"
 
 # Environment Variables (non-secret)
-# [vars]
-# ENVIRONMENT = "production"
+[vars]
+ENVIRONMENT = "production"
 
-# Development settings
+# Secret Variables (set via wrangler secret put)
+# JWT_SECRET - Run: wrangler secret put JWT_SECRET
+# Then enter a secure random string (32+ characters)
+
+# Development Settings
 [dev]
 port = 5138
 local_protocol = "http"
+
+# Environment-specific configurations
+[env.staging]
+name = "hono-api-staging"
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "hono-api-production"
+[env.production.vars]
+ENVIRONMENT = "production"
